@@ -24,9 +24,8 @@
         },
         // And what `--capture` saves a frame with. Lazy for the same reason.
         .fluxion_image = .{
-            // A checkout next to this one, until the repository is published;
-            // then a `git+https` url and a hash, like the ones above.
-            .path = "../fluxion-image",
+            .url = "git+https://github.com/kisstp2006/fluxion-image#034c37b6ab2511088973bcb96ffb5ada06b4b038",
+            .hash = "fluxion_image-0.1.0-fyJkdUhXAAAijeOycvswOxJWKcXIuU8MVaOHi0L8L7K0",
             .lazy = true,
         },
     },
