@@ -68,12 +68,14 @@ One dependency comes with it, fetched the same way and needing nothing from
 you: [Fluxion Dyn](https://github.com/kisstp2006/fluxion-dyn), which is where
 `dll` gets its library opening and entry point binding from.
 
-One more is named in `build.zig.zon` and is *not* fetched for you:
-[Fluxion Platform](https://github.com/kisstp2006/fluxion-platform), which opens the window the examples
-put a swap chain in. It is `lazy`, and `build.zig` asks for it only when this
+Two more are named in `build.zig.zon` and are *not* fetched for you:
+[Fluxion Platform](https://github.com/kisstp2006/fluxion-platform), which
+opens the window the examples put a swap chain in, and
+[Fluxion Image](https://github.com/kisstp2006/fluxion-image), which saves a
+frame as a PNG. Both are `lazy`, and `build.zig` asks for them only when this
 is the package being built - a program that depends on `fluxion_d3d` downloads
-nothing of it, and the module imports nothing of it. Pass `-Dexamples=false`
-to skip it in a checkout of this repository too.
+neither, and the module imports neither. Pass `-Dexamples=false` to skip them
+in a checkout of this repository too.
 
 ## The short version
 
@@ -404,7 +406,9 @@ what the example adds is a signature. `examples/window.zig` is the window a
 swap chain needs, and it is [Fluxion Platform](https://github.com/kisstp2006/fluxion-platform) opening it
 — a lazy dependency of the examples alone, never of the library, which stops
 at a device. What the file adds is the shape the examples want: a `pump`, and
-the `HWND` as a pointer. `examples/capture.zig` writes a frame out as a PNG.
+the `HWND` as a pointer. `--capture` writes its frame out with
+[Fluxion Image](https://github.com/kisstp2006/fluxion-image), handed the row
+pitch the driver actually used.
 
 All three carry tests, and `zig build test` runs them, because a vtable slot
 nothing has called is a guess: they draw a triangle into a texture and read the

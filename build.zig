@@ -59,7 +59,7 @@ pub fn build(b: *std.Build) void {
     const examples_wanted = b.option(
         bool,
         "examples",
-        "Build the examples and their tests (pulls fluxion-platform)",
+        "Build the examples and their tests (pulls fluxion-platform and fluxion-image)",
     ) orelse (b.pkg_hash.len == 0);
     if (!examples_wanted) return;
 
@@ -67,6 +67,10 @@ pub fn build(b: *std.Build) void {
     // build runner fetches it and starts again, so returning here is not
     // giving up - it is the first half of the fetch.
     const platform_dep = b.lazyDependency("fluxion_platform", .{
+        .target = target,
+        .optimize = optimize,
+    }) orelse return;
+    const image_dep = b.lazyDependency("fluxion_image", .{
         .target = target,
         .optimize = optimize,
     }) orelse return;
@@ -88,15 +92,11 @@ pub fn build(b: *std.Build) void {
             .{ .name = "fluxion_platform", .module = platform_dep.module("fluxion_platform") },
         },
     });
-    // And a way to save a frame, so an example with a window in it can be
-    // looked at on a machine that has no display.
-    const capture_mod = b.createModule(.{
-        .root_source_file = b.path("examples/capture.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    // Saving a frame, so an example with a window in it can be looked at on
+    // a machine that has no display, is `fluxion-image`'s job.
+    const image_mod = image_dep.module("fluxion_image");
 
-    // All three carry their own tests, and they run with the library's: a
+    // Both carry their own tests, and they run with the library's: a
     // vtable slot nothing has called is a guess, and the way to stop guessing
     // is to draw a triangle into a texture and look at the pixels.
     const render_tests = b.addTest(.{
@@ -109,11 +109,6 @@ pub fn build(b: *std.Build) void {
         .root_module = window_mod,
     });
     test_step.dependOn(&b.addRunArtifact(window_tests).step);
-    const capture_tests = b.addTest(.{
-        .name = "fluxion-d3d-capture-tests",
-        .root_module = capture_mod,
-    });
-    test_step.dependOn(&b.addRunArtifact(capture_tests).step);
 
     // zig build example runs the tour; zig build example-<name> runs one of
     // the others; zig build examples runs all of them, in this order.
@@ -149,7 +144,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "fluxion_d3d", .module = mod },
                 .{ .name = "render11", .module = render_mod },
                 .{ .name = "window", .module = window_mod },
-                .{ .name = "capture", .module = capture_mod },
+                .{ .name = "fluxion_image", .module = image_mod },
             },
         });
         const exe = b.addExecutable(.{

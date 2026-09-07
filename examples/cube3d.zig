@@ -32,7 +32,7 @@ const std = @import("std");
 const Io = std.Io;
 const d3d = @import("fluxion_d3d");
 const render = @import("render11");
-const capture = @import("capture");
+const image = @import("fluxion_image");
 const Window = @import("window").Window;
 
 const com = d3d.com;
@@ -438,15 +438,13 @@ pub fn main(init: std.process.Init) !void {
         var readback = try screen.read();
         defer readback.end();
 
-        try capture.writePng(
-            init.gpa,
-            init.io,
-            path,
-            options.width,
-            options.height,
-            readback.pixels,
-            readback.row_pitch,
-        );
+        try image.png.writeFile(init.gpa, init.io, path, .{
+            .width = options.width,
+            .height = options.height,
+            .pixels = readback.pixels,
+            // The driver pads its rows to suit itself; this is its pitch.
+            .row_pitch = readback.row_pitch,
+        }, .{});
         try out.print("wrote {s}, {d} by {d}, at {d:.2} seconds\n", .{
             path,
             options.width,
