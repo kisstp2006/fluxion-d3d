@@ -3,11 +3,10 @@
 //! `d3d11.dll`: a device, the context that drives it, and the feature level
 //! the two of them settled on.
 //!
-//! Direct3D 11 is the older of the two APIs and the easier one to get a
-//! picture out of, because the runtime does the work that Direct3D 12 hands
-//! back to the program. It is also the one that still runs on hardware from
-//! 2009, which is why a program that wants to run everywhere starts here and
-//! only asks for 12 when it can use it.
+//! The older of the two APIs and the easier one to get a picture out of: the
+//! runtime does the work Direct3D 12 hands back to the program. It also still
+//! runs on hardware from 2009, which is why a program that wants to run
+//! everywhere starts here and asks for 12 only when it can use it.
 //!
 //! ```zig
 //! var d3d11 = try D3d11.load();
@@ -18,16 +17,14 @@
 //! std.debug.print("feature level {f}\n", .{device.level});
 //! ```
 //!
-//! **What `createDevice` will not let you say.** `D3D11CreateDevice` takes
-//! both an adapter and a driver type, and the two are not independent: naming
-//! an adapter means the driver type has to be `UNKNOWN`, and getting that
-//! wrong is `E_INVALIDARG` with nothing to say why. `Driver` is a union rather
-//! than an enum plus a pointer, so the combination cannot be written down.
+//! **What `createDevice` will not let you say.** `D3D11CreateDevice` takes both
+//! an adapter and a driver type, and naming an adapter means the driver type
+//! has to be `UNKNOWN` - getting it wrong is `E_INVALIDARG` with no
+//! explanation. `Driver` is a union, so the bad combination cannot be written.
 //!
-//! **The debug layer.** `flags.debug` needs the D3D11 SDK layers, which are an
-//! optional Windows feature and are not on an ordinary machine. Without them
-//! the call fails with `error.SdkComponentMissing`, and the usual answer is to
-//! ask again without the flag:
+//! **The debug layer.** `flags.debug` needs the D3D11 SDK layers, an optional
+//! Windows feature absent from an ordinary machine. Without them the call fails
+//! with `error.SdkComponentMissing`, and the usual answer is to ask again:
 //!
 //! ```zig
 //! var device = d3d11.createDevice(.{ .flags = .{ .debug = true } }) catch |err| switch (err) {
@@ -157,15 +154,12 @@ pub const D3d11 = struct {
     /// The highest feature level this driver would give, without making a
     /// device to find out.
     ///
-    /// `D3D11CreateDevice` with no output pointers does the negotiation and
-    /// then stops, which costs a fraction of a real create and leaves nothing
-    /// to release. Null means this driver cannot make a device at all - no
-    /// hardware, or none that reaches the bottom of the ladder.
+    /// `D3D11CreateDevice` with no output pointers negotiates and stops, which
+    /// costs a fraction of a real create and leaves nothing to release. Null
+    /// means this driver cannot make a device at all.
     ///
-    /// Unlike `createDevice`, this walks down the list on `E_INVALIDARG`:
-    /// asking what a machine supports has to survive a runtime that has never
-    /// heard of the newest level, and the only way a runtime says so is by
-    /// failing the whole call.
+    /// Unlike `createDevice`, this walks down the list on `E_INVALIDARG`, since
+    /// that is the only way a runtime says it has never heard of a level.
     pub fn highestLevel(self: D3d11, driver: Driver) ?FeatureLevel {
         var levels: []const FeatureLevel = &FeatureLevel.all;
         while (levels.len > 0) : (levels = levels[1..]) {

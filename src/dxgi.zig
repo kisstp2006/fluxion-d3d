@@ -2,11 +2,10 @@
 
 //! `dxgi.dll`: the factory, the adapters it lists, and what they are.
 //!
-//! DXGI is the part of the stack that has nothing to do with drawing. It knows
-//! which graphics adapters exist, which monitors hang off them, how a back
-//! buffer reaches the screen, and how a device is told it has been lost.
-//! Direct3D 11 and Direct3D 12 both sit on it, which is why finding out what a
-//! machine can do starts here and not in either of them.
+//! DXGI is the part of the stack with nothing to do with drawing: which
+//! adapters exist, which monitors hang off them, how a back buffer reaches the
+//! screen, how a device is told it has been lost. Direct3D 11 and 12 both sit
+//! on it, which is why finding out what a machine can do starts here.
 //!
 //! ```zig
 //! var dxgi = try Dxgi.load();
@@ -23,13 +22,12 @@
 //! }
 //! ```
 //!
-//! **Versions.** DXGI has been extended eight times and each extension is a
-//! new interface rather than a new function, so what a machine can do is found
-//! out by asking an object whether it is also something newer -
-//! `com.queryInterface(factory, IDXGIFactory6)` - and taking `NoInterface` for
-//! an answer. `IDXGIFactory1` is the floor: it has been in every Windows since
-//! 7. Tearing control needs `IDXGIFactory5`, and picking the discrete GPU by
-//! name rather than by guessing at its description needs `IDXGIFactory6`.
+//! **Versions.** Each of DXGI's eight extensions is a new interface rather than
+//! a new function, so what a machine can do is found by asking an object
+//! whether it is also something newer - `com.queryInterface(factory,
+//! IDXGIFactory6)` - and taking `NoInterface` for an answer. `IDXGIFactory1` is
+//! the floor, in every Windows since 7; tearing control needs `IDXGIFactory5`,
+//! and picking the discrete GPU by name needs `IDXGIFactory6`.
 
 const std = @import("std");
 const testing = std.testing;

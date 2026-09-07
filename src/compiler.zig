@@ -2,18 +2,13 @@
 
 //! `d3dcompiler_47.dll`: HLSL in, bytecode out.
 //!
-//! Shaders can be compiled when a program is built, and for anything shipping
-//! they should be - compilation is slow, the compiler is another dependency,
-//! and a syntax error found at run time is found by a customer. But a program
-//! has to load the bytecode from somewhere either way, and the compiler is a
-//! DLL with the same problem as the rest of Direct3D: it is present on a
-//! stock Windows 10 or 11 and absent on a stripped-down server install, and a
-//! program that imports `D3DCompile` the ordinary way does not start where it
-//! is missing.
-//!
-//! So it loads like everything else here, and a machine without it is a
-//! `error.LibraryNotFound` to plan around rather than a program that will not
-//! run.
+//! Shaders should be compiled at build time for anything shipping: compilation
+//! is slow, and a syntax error found at run time is found by a customer. But
+//! the compiler is a DLL with the same problem as the rest of Direct3D -
+//! present on a stock Windows 10 or 11, absent on a stripped-down server
+//! install - so it loads like everything else here, and a machine without it is
+//! an `error.LibraryNotFound` to plan around rather than a program that will
+//! not start.
 //!
 //! ```zig
 //! var compiler = try Compiler.load();
@@ -27,13 +22,12 @@
 //! };
 //! ```
 //!
-//! `Output` carries the messages alongside the result rather than throwing
-//! them away, because a compiler that says only "failed" is not much of a
-//! compiler: the line number and the reason are the whole value.
+//! `Output` keeps the messages alongside the result: a compiler that says only
+//! "failed" is not much of a compiler, and the line number is the whole value.
 //!
-//! This is the old compiler, which produces the DXBC that Direct3D 11 and
-//! shader model 5.1 take. Shader model 6 is DXIL and comes from `dxcompiler.dll`,
-//! which does not ship with Windows and is a different library's problem.
+//! This is the old compiler, producing the DXBC that Direct3D 11 and shader
+//! model 5.1 take. Shader model 6 is DXIL from `dxcompiler.dll`, which does not
+//! ship with Windows and is a different library's problem.
 
 const std = @import("std");
 const testing = std.testing;

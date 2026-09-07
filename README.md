@@ -25,19 +25,16 @@ nothing else:
 | `createDevice` / `createFactory` | The thing the DLL exists to make. |
 | `highestLevel` / `highestSupported` | What it would grant, asked without making anything. |
 
-Direct3D is not a library you link against. `d3d12.dll` is missing on Windows
-before 10, `CreateDXGIFactory2` on Windows before 8.1, `d3dcompiler_47.dll` on a
-stripped-down server install, and both debug layers on any machine where nobody
-installed them. A program that imports those symbols the ordinary way does not
-start at all on a machine that is short one — the loader fails before `main`,
-with a message about an entry point and no way to fall back. So everything here
-is fetched by name, every entry point that is not universal is an optional, and
-a missing one is a decision rather than a crash.
+Direct3D is not a library you link against. `d3d12.dll` is missing before
+Windows 10, `CreateDXGIFactory2` before 8.1, `d3dcompiler_47.dll` on a
+stripped-down server install, and a program that imports those the ordinary way
+does not start at all where one is short — the loader fails before `main`, with
+no way to fall back. So everything here is fetched by name, and a missing entry
+point is a decision rather than a crash.
 
-Nothing here allocates. Nothing here draws: this is the part that runs before a
-renderer, and it stops at a device, a queue and an honest answer about what the
-machine will do. The examples go further, and say what going further costs —
-see [Examples](#examples).
+Nothing here allocates, and nothing here draws: it stops at a device, a queue
+and an honest answer about what the machine will do. The examples go further,
+and say what that costs — see [Examples](#examples).
 
 ## Install
 
@@ -104,12 +101,11 @@ var library = try d3d.Library.openSystem("d3d12.dll");
 defer library.close();
 ```
 
-That is not fussiness. `LoadLibrary("d3d12.dll")` searches the directory the
-program started from first, so anyone who can write a file next to the
-executable can have their own `d3d12.dll` loaded into the process with the
-process's privileges. The fix is one flag, `LOAD_LIBRARY_SEARCH_SYSTEM32`, and
-`openSystem` always passes it — and refuses a name with a path in it, because a
-path would defeat the point.
+That is not fussiness. `LoadLibrary("d3d12.dll")` searches the program's own
+directory first, so anyone who can write a file next to the executable can have
+their `d3d12.dll` loaded with the process's privileges. The fix is one flag,
+`LOAD_LIBRARY_SEARCH_SYSTEM32`, which `openSystem` always passes — and it
+refuses a name with a path in it.
 
 `bind` resolves a whole table at once. The struct is both the declaration and
 the list of what to fetch, so there is no second list to fall out of step with

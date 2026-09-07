@@ -24,16 +24,15 @@
 //! };
 //! ```
 //!
-//! Inheritance is not a language feature here, it is a layout rule: a derived
-//! interface repeats every slot of its base, in order, before adding its own.
-//! So `*IDXGIFactory6` is a valid `*IDXGIFactory1` is a valid `*IUnknown`, and
-//! `@ptrCast` between them is sound - which is exactly what `unknown` does.
-//! The rule cuts both ways: a vtable that is missing a slot, or has two in the
+//! Inheritance is a layout rule, not a language feature: a derived interface
+//! repeats every slot of its base, in order, before adding its own. So
+//! `*IDXGIFactory6` is a valid `*IUnknown` and `@ptrCast` between them is
+//! sound. It cuts both ways - a vtable missing a slot, or with two in the
 //! wrong order, compiles fine and calls the wrong function.
 //!
-//! Rather than copy a base's slots into every derived vtable and hope the
-//! copies stay in step, the interfaces in this library hold the base vtable as
-//! their first field, which lays out identically:
+//! Rather than copy a base's slots into every derived vtable and hope they stay
+//! in step, the interfaces here hold the base vtable as their first field,
+//! which lays out identically:
 //!
 //! ```zig
 //! pub const VTable = extern struct {
@@ -43,16 +42,14 @@
 //! };
 //! ```
 //!
-//! An inherited method is then called through `base`, and the chain says out
-//! loud which interface a method actually came from:
-//! `factory.vtable.base.EnumAdapters(...)`.
+//! An inherited method is called through `base`, so the chain says which
+//! interface it came from: `factory.vtable.base.EnumAdapters(...)`.
 //!
 //! **Counting.** Every object holds a count. Getting one from anywhere - a
-//! create call, `QueryInterface`, an enumerator - raises it by one and puts
-//! the obligation on the caller; `release` lowers it, and the object frees
-//! itself at zero. Nothing here does that for you. `defer _ = com.release(x)`
-//! immediately after the call that produced `x` is the habit that makes the
-//! obligation impossible to forget.
+//! create call, `QueryInterface`, an enumerator - raises it and puts the
+//! obligation on the caller; `release` lowers it, and the object frees itself
+//! at zero. Nothing here does that for you: `defer _ = com.release(x)` right
+//! after the call that produced `x` is the habit that makes it hard to forget.
 
 const std = @import("std");
 const testing = std.testing;
@@ -81,10 +78,8 @@ pub const IUnknown = extern struct {
 /// serialised root signature, a compiler's error message. Released like any
 /// other COM object.
 ///
-/// It lives here rather than with one runtime because all of them use it: the
-/// shader compiler returns one, Direct3D 12 returns one from the root
-/// signature serialiser, and neither should have to depend on the other for
-/// the type.
+/// It lives here rather than with one runtime because all of them use it, and
+/// neither should have to depend on the other for the type.
 pub const ID3DBlob = extern struct {
     vtable: *const VTable,
 
@@ -154,12 +149,11 @@ pub fn releaseAll(objects: anytype) void {
 
 /// Ask an object for another of its interfaces.
 ///
-/// `T` must declare `pub const iid`. A successful call has taken a reference
-/// on the caller's behalf, so the result needs its own `release` - releasing
-/// the object it came from is not enough and not the same thing.
+/// `T` must declare `pub const iid`. A successful call takes a reference, so
+/// the result needs its own `release`; releasing the object it came from is
+/// not the same thing.
 ///
-/// `error.NoInterface` is the ordinary answer, not a fault: asking a
-/// `IDXGIFactory1` whether it is really a `IDXGIFactory6` is how a program
+/// `error.NoInterface` is the ordinary answer, not a fault: it is how a program
 /// finds out what the machine's DXGI can do.
 pub fn queryInterface(object: anytype, comptime T: type) Error!*T {
     const base = unknown(object);
@@ -193,10 +187,9 @@ pub fn iidOf(comptime T: type) *const Guid {
 /// const device = try com.received(ID3D12Device, hr, raw);
 /// ```
 ///
-/// The null check is not paranoia about the API. It is that `raw` starts null
-/// and the compiler cannot know the call wrote to it, so something has to look
-/// - and a success with nothing written is better as `error.NullPointer` than
-/// as a pointer to address zero handed to the next call.
+/// The null check is not paranoia: `raw` starts null and nothing proves the
+/// call wrote to it, so a success with nothing written is better as
+/// `error.NullPointer` than as address zero handed to the next call.
 pub fn received(comptime T: type, result: Hresult, raw: ?*anyopaque) Error!*T {
     try result.check();
     const pointer = raw orelse return error.NullPointer;

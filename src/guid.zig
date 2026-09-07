@@ -3,25 +3,22 @@
 //! The 128-bit name COM gives to an interface.
 //!
 //! Every call that hands back a COM object takes the identifier of the
-//! interface it is being asked for - `IID_ID3D12Device`, `IID_IDXGIFactory6` -
-//! and returns a pointer only if the object implements it. So a binding to
-//! Direct3D needs GUIDs before it needs anything else, and it needs them to be
-//! byte-for-byte right: a wrong IID is not a compile error, it is
-//! `E_NOINTERFACE` at run time and a null pointer to find the cause of.
+//! interface asked for - `IID_ID3D12Device`, `IID_IDXGIFactory6` - and returns
+//! a pointer only if the object implements it. A wrong IID is not a compile
+//! error: it is `E_NOINTERFACE` at run time and a null pointer to explain.
 //!
-//! `parseComptime` reads the form the headers and the documentation write, so
-//! an IID can be copied out of `d3d12.h` and pasted in, and a typo is a
-//! compile error rather than something to debug:
+//! `parseComptime` reads the form the headers write, so an IID can be pasted
+//! out of `d3d12.h` and a typo is a compile error rather than a debugging
+//! session:
 //!
 //! ```zig
 //! pub const iid = Guid.parseComptime("{189819F1-1DB6-4B57-BE54-1821339B85F7}");
 //! ```
 //!
 //! A `Guid` is four fields, not sixteen bytes, because that is what the C
-//! `GUID` is: three integers and eight loose bytes. Storing it that way means
-//! the struct is right on any machine, and it means the *byte* order - the
-//! part everyone gets wrong - has to be asked for, through `toBytes` and
-//! `Layout`.
+//! `GUID` is. Storing it that way keeps the struct right on any machine, and
+//! makes the *byte* order - the part everyone gets wrong - something you have
+//! to ask for, through `toBytes` and `Layout`.
 
 const std = @import("std");
 const testing = std.testing;

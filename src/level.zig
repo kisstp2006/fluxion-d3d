@@ -3,29 +3,26 @@
 //! Feature levels: how much of Direct3D a piece of hardware actually does.
 //!
 //! A feature level is not a version of the API. It is a fixed bundle of
-//! capabilities - shader model, texture size, how many render targets, whether
-//! there are compute shaders - that a card either meets in full or does not
-//! meet at all. Direct3D 11 and Direct3D 12 are two APIs over the same ladder,
-//! which is why the same `12_0` appears in both and why `d3d11.dll` will
-//! happily give a device on hardware from 2010.
+//! capabilities - shader model, texture size, render targets, compute shaders -
+//! that a card either meets in full or not at all. Direct3D 11 and 12 are two
+//! APIs over the same ladder, which is why the same `12_0` appears in both.
 //!
-//! Both `D3D11CreateDevice` and `D3D12CreateDevice` take a level and answer
-//! with one. The 11 call takes a whole list, tries them in the order given,
-//! and reports which one it settled on; the 12 call takes the lowest that will
-//! do and fails if the adapter cannot reach it. Two things follow, and both
+//! Both create calls take a level and answer with one: the 11 call takes a
+//! list, tries it in order, and reports what it settled on; the 12 call takes
+//! the lowest that will do and fails below it. Two things follow, and both
 //! bite:
 //!
 //!   * The list must be in descending order. It is tried in order, not sorted,
 //!     so a list that starts at `11_0` gets `11_0` on a card that could have
 //!     done `12_1`.
-//!   * A level the installed runtime has never heard of is `E_INVALIDARG`, not
-//!     a level that gets skipped. Passing `12_2` to a Windows 8 machine fails
-//!     the whole call. The old answer is to try the long list, and on
-//!     `E_INVALIDARG` try a shorter one - which is what `range` is for.
+//!   * A level the runtime has never heard of is `E_INVALIDARG`, not a level
+//!     that gets skipped: passing `12_2` to a Windows 8 machine fails the whole
+//!     call. The answer is to try the long list and, on `E_INVALIDARG`, a
+//!     shorter one - which is what `range` is for.
 //!
-//! Passing no list at all means "whatever this runtime knows", which changes
-//! from one Windows to the next. A program that wants the same answer on every
-//! machine passes its own list.
+//! Passing no list means "whatever this runtime knows", which changes from one
+//! Windows to the next. A program wanting the same answer everywhere passes its
+//! own list.
 
 const std = @import("std");
 const testing = std.testing;
@@ -116,8 +113,8 @@ pub const FeatureLevel = enum(u32) {
     /// The list to hand a create call: every level from `highest` down to
     /// `lowest`, in that order.
     ///
-    /// This is a compile-time slice of a constant array, so it costs nothing
-    /// at run time and the bounds are checked when the program is built:
+    /// A comptime slice of a constant array, so it costs nothing at run time
+    /// and the bounds are checked at build:
     ///
     /// ```zig
     /// // Everything this program can use, best first.

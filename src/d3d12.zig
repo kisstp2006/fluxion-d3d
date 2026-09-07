@@ -2,12 +2,11 @@
 
 //! `d3d12.dll`: the device, what it can do, and the queue that work goes to.
 //!
-//! Direct3D 12 gives back the bookkeeping the 11 runtime did on the program's
-//! behalf - memory, synchronisation, the state of every resource - in exchange
-//! for the driver overhead that came with it. None of that is a loader's
-//! business. What is: the DLL is not on every Windows, the device may refuse
-//! an adapter that Direct3D 11 was happy with, and the debug layer lives
-//! behind an optional Windows feature.
+//! Direct3D 12 hands back the bookkeeping the 11 runtime did - memory,
+//! synchronisation, resource state - in exchange for the driver overhead that
+//! came with it. None of that is a loader's business. What is: the DLL is not
+//! on every Windows, the device may refuse an adapter Direct3D 11 accepted, and
+//! the debug layer lives behind an optional Windows feature.
 //!
 //! ```zig
 //! var d3d12 = try D3d12.load();
@@ -23,13 +22,13 @@
 //! is `supports`, and it is the cheap way to find the adapter worth using
 //! before committing to one.
 //!
-//! **Structs returned by value.** Several methods here return a small struct
-//! rather than writing through a pointer, and how that is passed differs
-//! between the compiler Microsoft built the runtime with and everyone else.
-//! It is the oldest bug in third-party Direct3D 12 bindings: the call appears
-//! to work and the returned handle is rubbish. Every such slot is left
-//! deliberately undeclared below, with a note. They are reachable by declaring
-//! them yourself, once, with the ABI checked - not by accident.
+//! **Structs returned by value.** Several methods return a small struct rather
+//! than writing through a pointer, and how that is passed differs between the
+//! compiler Microsoft built the runtime with and everyone else. It is the
+//! oldest bug in third-party Direct3D 12 bindings: the call appears to work and
+//! the handle is rubbish. Every such slot is left undeclared below, with a
+//! note - reachable by declaring it yourself with the ABI checked, not by
+//! accident.
 
 const std = @import("std");
 const testing = std.testing;

@@ -28,26 +28,21 @@
 //! ```
 //!
 //! **None of that is about Direct3D.** Opening a library by name and fetching
-//! its entry points one at a time is what `fluxion-dyn` does, for
-//! `libvulkan.so.1` and `opengl32.dll` as much as for `d3d12.dll`, so that is
-//! where it lives and this module is the Direct3D-facing name for it. What
-//! stays here is the reason Direct3D needs it, and one guarantee worth
-//! restating because it is the whole argument for loading rather than linking:
+//! its entry points is what `fluxion-dyn` does, for `libvulkan.so.1` and
+//! `opengl32.dll` as much as for `d3d12.dll`, so this module is the
+//! Direct3D-facing name for it. What stays here is one guarantee worth
+//! restating, because it is the whole argument for loading over linking:
 //!
-//! **Why `openSystem` and not a path.** `LoadLibrary("d3d12.dll")` searches
-//! the directory the program was started from first. Anyone who can write a
-//! file next to the executable - an installer, a shared folder, a download
-//! that landed in the same place - can therefore put their own `d3d12.dll`
-//! there and have it loaded in the process, with the process's privileges.
-//! This is old, it has a name (DLL planting or DLL preloading), and the fix is
-//! one flag: `LOAD_LIBRARY_SEARCH_SYSTEM32` says to look in `System32` and
-//! nowhere else. `openSystem` always passes it, and refuses a name with a path
-//! in it, because a path would defeat the point.
+//! **Why `openSystem` and not a path.** `LoadLibrary("d3d12.dll")` searches the
+//! program's own directory first, so anyone who can write a file next to the
+//! executable can have their `d3d12.dll` loaded with the process's privileges.
+//! This is old, it has a name (DLL planting), and the fix is one flag:
+//! `LOAD_LIBRARY_SEARCH_SYSTEM32`. `openSystem` always passes it, and refuses a
+//! name with a path in it.
 //!
-//! A DLL that genuinely ships with the program - `d3dcompiler_47.dll`, or the
-//! Agility SDK's `D3D12Core.dll` - is a different case, and one this module
-//! deliberately does not guess at: load it however its rules require and hand
-//! the handle to `Library.fromHandle`.
+//! A DLL that ships with the program - `d3dcompiler_47.dll`, the Agility SDK's
+//! `D3D12Core.dll` - is a different case this module does not guess at: load it
+//! however its rules require and hand the handle to `Library.fromHandle`.
 
 const std = @import("std");
 const testing = std.testing;

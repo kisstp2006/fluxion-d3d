@@ -22,16 +22,14 @@
 //!   `entries`           the entry points, with the optional ones as optionals
 //!   `library`           the module itself, for a symbol this library missed
 //!
-//! Direct3D is not linked, it is loaded: `d3d12.dll` is missing on Windows
-//! before 10, `CreateDXGIFactory2` on Windows before 8.1, and the debug layers
-//! on any machine where nobody installed them. A program that imports those
-//! symbols the ordinary way fails to start rather than falling back. So every
-//! entry point here is fetched by name and every optional one is an optional,
-//! and the whole library allocates nothing.
+//! Direct3D is not linked, it is loaded: `d3d12.dll` is missing before Windows
+//! 10, `CreateDXGIFactory2` before 8.1, the debug layers wherever nobody
+//! installed them. A program importing those the ordinary way fails to start
+//! rather than falling back, so every entry point here is fetched by name and
+//! every optional one is an optional. Nothing allocates.
 //!
-//! `detect` is the short version: it opens all four, asks each what it can
-//! do, and closes them again without creating a device or leaving anything
-//! behind.
+//! `detect` is the short version: it opens all four, asks each what it can do,
+//! and closes them again without creating a device.
 
 const std = @import("std");
 const builtin = @import("builtin");

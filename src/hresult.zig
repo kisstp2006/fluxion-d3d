@@ -2,22 +2,19 @@
 
 //! The 32-bit number every COM call returns instead of throwing.
 //!
-//! An `HRESULT` is not an error code with a list of values to look up. It is
-//! three fields packed into an `i32`: one bit that says whether this is a
-//! failure, eleven bits naming the component that failed, and sixteen bits
-//! that mean whatever that component wanted them to mean. That is why
-//! `0x887A0005` can be recognised as "something in DXGI" - `0x87A` is the
-//! facility DXGI was given - without knowing what `0x0005` is.
+//! An `HRESULT` is not a code to look up in a list. It is three fields packed
+//! into an `i32`: one bit for failure, eleven naming the component, and sixteen
+//! that mean whatever that component wanted. Which is why `0x887A0005` can be
+//! recognised as "something in DXGI" without knowing what `0x0005` is.
 //!
-//! Two consequences the sign bit is worth stating plainly:
+//! Two consequences worth stating plainly:
 //!
 //!   * Success is not one value. `S_OK` is zero and `S_FALSE` is one, and a
 //!     call that answers a question rather than doing work returns the second
-//!     one routinely - `D3D12CreateDevice` with no output pointer says "yes,
-//!     this adapter would work" by returning `S_FALSE`. Testing `hr == .s_ok`
-//!     turns that into a failure. Test `hr.failed()`.
-//!   * Failure is not one value either. There are thousands, most of them
-//!     from components that have nothing to do with Direct3D.
+//!     routinely - `D3D12CreateDevice` with no output pointer says "yes, this
+//!     adapter would work" that way. Test `hr.failed()`, not `hr == .s_ok`.
+//!   * Failure is not one value either. There are thousands, most from
+//!     components with nothing to do with Direct3D.
 //!
 //! `check` maps the ones worth acting on differently to Zig errors and calls
 //! everything else `error.Unexpected`; `name` and `format` keep the original
@@ -142,9 +139,9 @@ pub const Hresult = enum(i32) {
     /// try factory.vtable.EnumAdapters1(factory, index, &adapter).check();
     /// ```
     ///
-    /// Values without a Zig error of their own become `error.Unexpected`. When
-    /// that matters, keep the `Hresult` and print it: the error set says what
-    /// to do, the number says what happened.
+    /// Values without a Zig error of their own become `error.Unexpected`; keep
+    /// the `Hresult` and print it when that matters. The error set says what to
+    /// do, the number says what happened.
     pub fn check(self: Hresult) Error!void {
         if (self.succeeded()) return;
         return switch (self) {
@@ -256,12 +253,10 @@ pub const Parts = packed struct(u32) {
 /// and most have nothing to do with graphics.
 ///
 /// Thirteen bits, because that is what `HRESULT_FACILITY` masks off. The
-/// original layout gave the facility eleven bits and spent the two above it on
-/// flags: `X`, reserved, and `N`, "the code below is an NTSTATUS". Then
-/// Microsoft ran past 0x7FF and began handing out numbers that overlap them -
-/// `dxgi` is 0x87A, which needs twelve bits. So the field is thirteen wide,
-/// and bit 12 of it, 0x1000, is still the NTSTATUS marker that
-/// `Parts.fromNtstatus` reads.
+/// original layout gave the facility eleven and spent the two above it on
+/// flags, but Microsoft ran past 0x7FF and began handing out numbers that
+/// overlap them - `dxgi` is 0x87A. Bit 12, 0x1000, is still the NTSTATUS
+/// marker `Parts.fromNtstatus` reads.
 pub const Facility = enum(u13) {
     null = 0,
     rpc = 1,
