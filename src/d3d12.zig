@@ -102,7 +102,7 @@ pub const D3d12 = struct {
         ) callconv(.winapi) Hresult = null,
     };
 
-    pub const LoadError = dll.Library.OpenError || error{SymbolNotFound};
+    pub const LoadError = dll.OpenError || error{SymbolNotFound};
 
     /// `error.LibraryNotFound` on anything older than Windows 10, where there
     /// is no `d3d12.dll` to find. That is the ordinary answer on such a

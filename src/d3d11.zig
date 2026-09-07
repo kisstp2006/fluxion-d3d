@@ -99,7 +99,7 @@ pub const D3d11 = struct {
         ) callconv(.winapi) Hresult = null,
     };
 
-    pub const LoadError = dll.Library.OpenError || error{SymbolNotFound};
+    pub const LoadError = dll.OpenError || error{SymbolNotFound};
 
     pub fn load() LoadError!D3d11 {
         var library = try dll.Library.openSystem("d3d11.dll");

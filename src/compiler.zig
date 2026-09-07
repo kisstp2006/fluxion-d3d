@@ -97,7 +97,7 @@ pub const Compiler = struct {
         D3DStripShader: ?*const anyopaque = null,
     };
 
-    pub const LoadError = dll.Library.OpenError || error{SymbolNotFound};
+    pub const LoadError = dll.OpenError || error{SymbolNotFound};
 
     /// `error.LibraryNotFound` where the compiler is not installed, which is a
     /// real state on a server install and in a container.

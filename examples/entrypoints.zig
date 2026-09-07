@@ -29,7 +29,7 @@ pub fn main(init: std.process.Init) !void {
 
     // --- the DLLs ---------------------------------------------------------
     try out.writeAll("libraries\n");
-    for ([_][]const u8{
+    for ([_][:0]const u8{
         "dxgi.dll",
         "d3d11.dll",
         "d3d12.dll",

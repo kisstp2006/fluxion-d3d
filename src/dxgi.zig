@@ -70,7 +70,7 @@ pub const Dxgi = struct {
         DXGIGetDebugInterface1: ?*const fn (u32, *const Guid, *?*anyopaque) callconv(.winapi) Hresult = null,
     };
 
-    pub const LoadError = dll.Library.OpenError || error{SymbolNotFound};
+    pub const LoadError = dll.OpenError || error{SymbolNotFound};
 
     pub fn load() LoadError!Dxgi {
         var library = try dll.Library.openSystem("dxgi.dll");

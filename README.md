@@ -4,7 +4,7 @@ Direct3D 11 and 12, loaded at run time rather than linked. For Zig 0.16.
 
 | Module | What it is |
 | --- | --- |
-| `dll` | Opening a system DLL from `System32` and nowhere else, and binding a whole struct of entry points in one call. |
+| `dll` | Opening a system DLL from `System32` and nowhere else, and binding a whole struct of entry points in one call. [Fluxion Dyn](https://github.com/kisstp2006/fluxion-dyn) under a Direct3D-facing name. |
 | `guid` | The 128-bit name COM gives an interface, parsed at compile time so a typo is a compile error, with both byte layouts named. |
 | `hresult` | The number every COM call returns: severity, facility and code, a Zig error for the ones worth acting on, and the SDK name for the log line. |
 | `com` | Calling through a vtable, the reference counting that goes with it, and a compile-time check that an interface is shaped like one. |
@@ -66,6 +66,10 @@ exe_mod.addImport("fluxion_d3d", fluxion.module("fluxion_d3d"));
 ```zig
 const d3d = @import("fluxion_d3d");
 ```
+
+One dependency comes with it, fetched the same way and needing nothing from
+you: [Fluxion Dyn](https://github.com/kisstp2006/fluxion-dyn), which is where
+`dll` gets its library opening and entry point binding from.
 
 ## The short version
 
