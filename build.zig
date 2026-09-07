@@ -68,9 +68,11 @@ pub fn build(b: *std.Build) void {
     // zig build example runs the tour; zig build example-<name> runs one of
     // the others; zig build examples runs all of them, in this order.
     //
-    // The two with windows in them are given a frame count for the aggregate
-    // run, so `zig build examples` finishes on its own. Run on their own they
-    // stay open until the window is closed.
+    // The two with windows in them write a frame to a file for the aggregate
+    // run rather than opening anything. `zig build examples` has to finish on
+    // its own, and a window that appears for three seconds and vanishes is a
+    // worse way to end than a picture that stays on disk. Run on their own -
+    // `zig build example-cube3d` - they open a window and keep it.
     const examples = [_]struct {
         name: []const u8,
         step: []const u8,
@@ -81,8 +83,8 @@ pub fn build(b: *std.Build) void {
         .{ .name = "adapters", .step = "example-adapters", .about = "Every adapter, and what each runtime grants" },
         .{ .name = "entrypoints", .step = "example-entrypoints", .about = "Which entry points and interfaces this Windows has" },
         .{ .name = "shaders", .step = "example-shaders", .about = "Compile HLSL at run time and disassemble it" },
-        .{ .name = "scene2d", .step = "example-scene2d", .about = "2D: coloured boxes bouncing in a window", .chained_args = &.{ "--frames", "180" } },
-        .{ .name = "cube3d", .step = "example-cube3d", .about = "3D: a lit, spinning cube with a depth buffer", .chained_args = &.{ "--frames", "180" } },
+        .{ .name = "scene2d", .step = "example-scene2d", .about = "2D: coloured boxes bouncing in a window", .chained_args = &.{ "--capture", "zig-out/scene2d.png" } },
+        .{ .name = "cube3d", .step = "example-cube3d", .about = "3D: a lit, spinning cube with a depth buffer", .chained_args = &.{ "--capture", "zig-out/cube3d.png" } },
     };
 
     const all_examples = b.step("examples", "Build and run every example in turn");

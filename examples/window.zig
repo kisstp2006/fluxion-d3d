@@ -87,6 +87,16 @@ extern "user32" fn DefWindowProcW(Handle, u32, usize, isize) callconv(.winapi) i
 extern "user32" fn DestroyWindow(window: Handle) callconv(.winapi) c_int;
 extern "user32" fn PostQuitMessage(code: c_int) callconv(.winapi) void;
 extern "user32" fn ShowWindow(window: Handle, command: c_int) callconv(.winapi) c_int;
+extern "user32" fn SetForegroundWindow(window: Handle) callconv(.winapi) c_int;
+extern "user32" fn SetWindowPos(
+    window: Handle,
+    insert_after: ?Handle,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    flags: u32,
+) callconv(.winapi) c_int;
 extern "user32" fn PeekMessageW(
     message: *Message,
     window: ?Handle,
@@ -110,6 +120,11 @@ const ws_visible: u32 = 0x10000000;
 const cw_usedefault: i32 = @bitCast(@as(u32, 0x80000000));
 const sw_show: c_int = 5;
 const pm_remove: u32 = 1;
+
+/// `SWP_*`: leave the position and the size alone, and make sure it is shown.
+const swp_nosize: u32 = 0x0001;
+const swp_nomove: u32 = 0x0002;
+const swp_showwindow: u32 = 0x0040;
 
 const wm_destroy: u32 = 0x0002;
 const wm_size: u32 = 0x0005;
@@ -223,6 +238,21 @@ pub const Window = struct {
         ) orelse return error.WindowFailed;
 
         _ = ShowWindow(handle, sw_show);
+
+        // A window started from a terminal opens behind it as often as not,
+        // and a program whose whole output is a window is no use underneath
+        // something else. Two calls, because they can do different amounts.
+        //
+        // Raising it in the stacking order is nearly always allowed, so this
+        // is what actually puts the window where it can be seen.
+        _ = SetWindowPos(handle, null, 0, 0, 0, 0, swp_nomove | swp_nosize | swp_showwindow);
+        // Taking the keyboard as well is not: Windows refuses it unless the
+        // process asking is already the one being typed at, which a program
+        // launched from a terminal in the foreground usually is and a program
+        // launched from a script is not. Neither result is checked, because
+        // both are fine - the window is visible either way, and it closes on
+        // its own button whether or not escape reaches it.
+        _ = SetForegroundWindow(handle);
 
         var self: Window = .{ .handle = handle, .width = width, .height = height };
         // Ask the window rather than trusting the arithmetic: the frame the

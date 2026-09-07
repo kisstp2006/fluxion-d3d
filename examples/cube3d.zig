@@ -456,6 +456,9 @@ pub fn main(init: std.process.Init) !void {
         return out.flush();
     }
 
+    try out.writeAll("opening a window - escape or close it to quit\n");
+    try out.flush();
+
     var window = try Window.open("Fluxion D3D - 3D", options.width, options.height);
     defer window.close();
 

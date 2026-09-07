@@ -356,18 +356,23 @@ bits are famously not in order: level 1 is zero, level 0 is the low bit, level
 
 ## Examples
 
-`zig build examples` runs all six in turn. Each has a step of its own, and the
-two with windows in them take `-- --frames N` so a script can run them, or
-`-- --capture out.png` to skip the window altogether and write one frame to a
-file:
+Each has a step of its own. The two with windows in them open one and keep it
+until it is closed — escape or the close button — and they take
+`-- --frames N` to stop after a fixed count instead, or `-- --capture out.png`
+to skip the window altogether and write one frame to a file:
 
 ```bash
-zig build example-cube3d -- --capture cube3d.png --at 2.1
+zig build example-cube3d                              # a window, until you close it
+zig build example-cube3d -- --capture cube3d.png      # no window, one PNG
 ```
 
-That is the same drawing into a texture instead of a swap chain, so it works
-on a machine with no display at all — and it is how the pictures below were
-made.
+`--capture` is the same drawing into a texture instead of a swap chain, so it
+works on a machine with no display at all.
+
+`zig build examples` runs all six in turn and has to finish on its own, so it
+runs those two in `--capture` mode: it writes `zig-out/scene2d.png` and
+`zig-out/cube3d.png` rather than flashing a window for three seconds and
+taking it away again.
 
 | Example | What it shows |
 | --- | --- |
