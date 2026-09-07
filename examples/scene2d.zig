@@ -477,7 +477,9 @@ test "a window, a swap chain, and a resize" {
     var scene = try Scene.init(device, hlsl);
     defer scene.deinit();
 
-    var window = try Window.open("Fluxion D3D - test", 320, 240);
+    // Hidden: the swap chain is real and presents into it, and nothing
+    // flashes up on a machine somebody is using.
+    var window = try @import("window").openForTest(320, 240);
     defer window.close();
     _ = window.pump();
 

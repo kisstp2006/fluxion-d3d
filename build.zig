@@ -33,6 +33,44 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run the library test suite");
     test_step.dependOn(&run_tests.step);
 
+    // zig build docs -> zig-out/docs
+    const docs_lib = b.addLibrary(.{
+        .name = "fluxion-d3d",
+        .root_module = mod,
+    });
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = docs_lib.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+    const docs_step = b.step("docs", "Generate API documentation into zig-out/docs");
+    docs_step.dependOn(&install_docs.step);
+
+    // -------------------------------------------------------------------
+    // Examples
+    // -------------------------------------------------------------------
+
+    // The examples need a window to put a swap chain in, and that is
+    // `fluxion-platform`, a lazy dependency: fetched only when the examples
+    // are actually wanted, which is when this is the package being built and
+    // not when it is somebody else's dependency. `-Dexamples=false` builds
+    // the library's own tests alone; `-Dexamples=true` asks for them from
+    // inside another package.
+    const examples_wanted = b.option(
+        bool,
+        "examples",
+        "Build the examples and their tests (pulls fluxion-platform)",
+    ) orelse (b.pkg_hash.len == 0);
+    if (!examples_wanted) return;
+
+    // On the first run after a clean checkout this comes back null and the
+    // build runner fetches it and starts again, so returning here is not
+    // giving up - it is the first half of the fetch.
+    const platform_dep = b.lazyDependency("fluxion_platform", .{
+        .target = target,
+        .optimize = optimize,
+    }) orelse return;
+
     // What the examples share: the Direct3D 11 calls that draw, which the
     // library deliberately stops short of, and a window to draw into. Neither
     // is part of the library.
@@ -46,7 +84,9 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("examples/window.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{.{ .name = "fluxion_d3d", .module = mod }},
+        .imports = &.{
+            .{ .name = "fluxion_platform", .module = platform_dep.module("fluxion_platform") },
+        },
     });
     // And a way to save a frame, so an example with a window in it can be
     // looked at on a machine that has no display.
@@ -143,17 +183,4 @@ pub fn build(b: *std.Build) void {
         });
         test_step.dependOn(&b.addRunArtifact(example_tests).step);
     }
-
-    // zig build docs -> zig-out/docs
-    const docs_lib = b.addLibrary(.{
-        .name = "fluxion-d3d",
-        .root_module = mod,
-    });
-    const install_docs = b.addInstallDirectory(.{
-        .source_dir = docs_lib.getEmittedDocs(),
-        .install_dir = .prefix,
-        .install_subdir = "docs",
-    });
-    const docs_step = b.step("docs", "Generate API documentation into zig-out/docs");
-    docs_step.dependOn(&install_docs.step);
 }
