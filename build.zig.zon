@@ -18,9 +18,8 @@
         // never downloads it, and the module itself does not import it - the
         // library stops at a device, and a window is what a program brings.
         .fluxion_platform = .{
-            // A checkout next to this one, until the repository is published;
-            // then a `git+https` url and a hash, like the one above.
-            .path = "../fluxion-platform",
+            .url = "git+https://github.com/kisstp2006/fluxion-platform#373505b40d7d5d20840adba8485cc3bf707ce4ce",
+            .hash = "fluxion_platform-0.1.0-WsOjUVkbDADvAs9Vhe9Wbgw8FROUEtsQIVRwAiLuonq5",
             .lazy = true,
         },
     },
