@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: BSL-1.0
 
 //! Fluxion D3D - loading Direct3D 11 and 12 at run time, and finding out what
 //! the machine will actually give you.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: BSL-1.0
 
 //! `dxgi.dll`: the factory, the adapters it lists, and what they are.
 //!

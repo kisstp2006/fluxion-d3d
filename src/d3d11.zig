@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: BSL-1.0
 
 //! `d3d11.dll`: a device, the context that drives it, and the feature level
 //! the two of them settled on.

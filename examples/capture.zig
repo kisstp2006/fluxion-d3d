@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: BSL-1.0
 
 //! Saving what came out of the GPU, so an example with a window in it can be
 //! looked at without one.

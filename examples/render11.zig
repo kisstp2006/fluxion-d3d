@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: BSL-1.0
 
 //! What the examples need beyond the loader: the Direct3D 11 calls that draw.
 //!

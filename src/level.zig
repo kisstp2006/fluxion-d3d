@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: BSL-1.0
 
 //! Feature levels: how much of Direct3D a piece of hardware actually does.
 //!
