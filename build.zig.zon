@@ -8,7 +8,7 @@
     .dependencies = .{
         // The library's one dependency.
         .fluxion_dyn = .{
-            .url = "git+https://github.com/kisstp2006/fluxion-dyn#27e7ba0dffff86887801afc7d312bfcdaff1c54f",
+            .url = "git+https://github.com/kisstp2006/fluxion-dyn#78c8c2a2ddcad8e90d3b45c0f80023f0b479f26b",
             .hash = "fluxion_dyn-0.1.0-5Dy8EU9PAQAp7cuNi6RU8eu0pgcFXWUbrBq69b7idVnA",
         },
 
@@ -18,14 +18,14 @@
         // never downloads it, and the module itself does not import it - the
         // library stops at a device, and a window is what a program brings.
         .fluxion_platform = .{
-            .url = "git+https://github.com/kisstp2006/fluxion-platform#373505b40d7d5d20840adba8485cc3bf707ce4ce",
-            .hash = "fluxion_platform-0.1.0-WsOjUVkbDADvAs9Vhe9Wbgw8FROUEtsQIVRwAiLuonq5",
+            .url = "git+https://github.com/kisstp2006/fluxion-platform#9ee5f1357cb6bc3e7b9b5323826e4e8957009e79",
+            .hash = "fluxion_platform-0.1.0-WsOjUWHDDwDCjU4rmewIqMFLVQEOj7pQ-NfBLPZ_5B9t",
             .lazy = true,
         },
         // And what `--capture` saves a frame with. Lazy for the same reason.
         .fluxion_image = .{
-            .url = "git+https://github.com/kisstp2006/fluxion-image#40c621cae37d3e916c4ef9b476eec2756c7b4633",
-            .hash = "fluxion_image-0.1.0-fyJkdS7vAABoCM9ka3MqX0VGd_L7My5Bqmg-BXQUtAPO",
+            .url = "git+https://github.com/kisstp2006/fluxion-image#79463ef201f11e15ada014467c0ad1d58b2a882d",
+            .hash = "fluxion_image-0.1.0-fyJkdS7vAAB1p43VSutvpxQB32hIcvJb3fGSZbo_qeha",
             .lazy = true,
         },
     },
