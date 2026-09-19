@@ -18,8 +18,8 @@
         // never downloads it, and the module itself does not import it - the
         // library stops at a device, and a window is what a program brings.
         .fluxion_platform = .{
-            .url = "git+https://github.com/kisstp2006/fluxion-platform#65f360fa3484c241438def3856c5b48b4a3e8cc9",
-            .hash = "fluxion_platform-0.1.0-WsOjUR1ZFwANXOiIAk3n_vA70LebrBMH_PV2d4GPkjyB",
+            .url = "git+https://github.com/kisstp2006/fluxion-platform#fa246b1be8b3edfe827422094d049ec75ef20929",
+            .hash = "fluxion_platform-0.1.0-WsOjUUdvFwBsx5RDEUqSL2wtPm-7WSZLQ9Hfh-Q5WEvP",
             .lazy = true,
         },
         // And what `--capture` saves a frame with. Lazy for the same reason.
