@@ -52,16 +52,6 @@ pub const level = @import("level.zig");
 pub const dxgi = @import("dxgi.zig");
 pub const d3d11 = @import("d3d11.zig");
 pub const d3d12 = @import("d3d12.zig");
-/// `ID3D12Resource`, `ID3D12DescriptorHeap`, `ID3D12Fence` and the
-/// `ID3D12Device` calls that make them. See `d3d12_resource`.
-pub const d3d12_resource = @import("d3d12_resource.zig");
-/// `ID3D12CommandAllocator`, `ID3D12GraphicsCommandList` and the value
-/// structs recording a frame needs. See `d3d12_command`.
-pub const d3d12_command = @import("d3d12_command.zig");
-/// `ID3D12RootSignature`, `ID3D12PipelineState` and what
-/// `D3D12SerializeRootSignature`/`CreateGraphicsPipelineState` take. See
-/// `d3d12_pipeline`.
-pub const d3d12_pipeline = @import("d3d12_pipeline.zig");
 pub const compiler = @import("compiler.zig");
 
 /// A loaded DLL and its entry points. See `dll`.
@@ -240,9 +230,6 @@ test {
     _ = dxgi;
     _ = d3d11;
     _ = d3d12;
-    _ = d3d12_resource;
-    _ = d3d12_command;
-    _ = d3d12_pipeline;
     _ = compiler;
 }
 
