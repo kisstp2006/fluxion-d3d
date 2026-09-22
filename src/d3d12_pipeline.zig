@@ -432,7 +432,10 @@ test "a root signature with real parameters, serialised and created" {
     defer _ = com.release(device);
 
     const ranges = [_]DescriptorRange{
-        .{ .range_type = .cbv, .num_descriptors = 1, .base_shader_register = 0 },
+        // A different register (`t0`) from the root CBV below (`b0`): two root
+        // parameters binding the same register and space is an invalid
+        // signature, and this is exercising two real parameters, not one.
+        .{ .range_type = .srv, .num_descriptors = 4, .base_shader_register = 0 },
     };
     const params = [_]RootParameter{
         RootParameter.cbv(0, .all),

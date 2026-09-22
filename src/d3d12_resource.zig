@@ -12,12 +12,16 @@
 //! twin): both return a struct - `D3D12_CPU_DESCRIPTOR_HANDLE`/
 //! `D3D12_GPU_DESCRIPTOR_HANDLE`, each one `SIZE_T`/`UINT64` wide - by value.
 //! MSVC's C++ ABI returns any class-typed value, however small, through a
-//! hidden pointer parameter that is passed *before* `this`, not after it: the
-//! real vtable slot is `RetType *Method(RetType *hiddenReturn, Self *this)`.
-//! Getting the argument order backwards compiles, links and then reads
-//! garbage or faults - this is a well-documented trap in other bindings of
-//! this exact call. `heapStart` below is the one place that calls it, and it
-//! is covered by a WARP test that would misbehave if the order were wrong.
+//! hidden pointer the caller allocates and passes in - and for a non-static
+//! member function that hidden pointer comes *after* the implicit `this`, not
+//! before it: the real vtable slot is `RetType *Method(Self *this, RetType
+//! *hiddenReturn)`. Several other bindings of this exact call document the
+//! opposite order and are wrong about it - this one was checked the
+//! reliable way, by trying both orders against a real WARP device and
+//! keeping the one that does not crash: swapping the order in `cpuHeapStart`/
+//! `gpuHeapStart` turns "a descriptor heap, and the CPU handle at its start"
+//! below from a segfault on `Release` (a corrupted vtable pointer from
+//! writing the handle into the wrong slot) into a passing test.
 
 const std = @import("std");
 const testing = std.testing;
@@ -51,7 +55,9 @@ pub const Format = enum(u32) {
     r32g32b32_float = 6,
     r8g8b8a8_unorm = 28,
     r8g8b8a8_uint = 30,
+    r32_float = 41,
     r32_uint = 42,
+    r32_sint = 43,
     r16_uint = 57,
     b8g8r8a8_unorm = 87,
     _,
@@ -236,11 +242,20 @@ pub const ResourceStates = packed struct(u32) {
     pub const common: ResourceStates = .{};
     pub const present: ResourceStates = .{};
     /// `D3D12_RESOURCE_STATE_GENERIC_READ`: the one state an upload-heap
-    /// resource is ever in. It is several of the bits above at once, which is
-    /// why this is spelled out rather than built from the fields - the OR of
-    /// `vertex_and_constant_buffer | index_buffer | non_pixel_shader_resource |
-    /// pixel_shader_resource | indirect_argument | copy_source`.
-    pub const generic_read: ResourceStates = @bitCast(@as(u32, 0x2C03));
+    /// resource is ever in. It is several of the bits above at once - the OR
+    /// of `vertex_and_constant_buffer | index_buffer | non_pixel_shader_resource |
+    /// pixel_shader_resource | indirect_argument | copy_source`, `0x1 | 0x2 |
+    /// 0x40 | 0x80 | 0x200 | 0x800 == 0xAC3` - so it is built from the fields
+    /// themselves rather than a second hand-computed literal that could drift
+    /// from them.
+    pub const generic_read: ResourceStates = .{
+        .vertex_and_constant_buffer = true,
+        .index_buffer = true,
+        .non_pixel_shader_resource = true,
+        .pixel_shader_resource = true,
+        .indirect_argument = true,
+        .copy_source = true,
+    };
 };
 
 /// `D3D12_CLEAR_VALUE`. Only the colour branch of the union: this backend
@@ -291,8 +306,8 @@ pub const SrvDimension = enum(u32) {
 /// valid one.
 pub const shader_4_component_mapping_identity: u32 = 5768;
 
-/// `D3D12_TEX2D_SRV`, the only shape of shader resource view this backend
-/// makes: MVP textures are always `.d2`, one mip level.
+/// `D3D12_TEX2D_SRV`, the shape this backend actually populates: MVP
+/// textures are always `.d2`, one mip level.
 pub const Tex2dSrv = extern struct {
     most_detailed_mip: u32 = 0,
     mip_levels: u32 = 1,
@@ -300,15 +315,50 @@ pub const Tex2dSrv = extern struct {
     resource_min_lod_clamp: f32 = 0,
 };
 
-/// `D3D12_SHADER_RESOURCE_VIEW_DESC`, narrowed to the `Texture2D` branch of
-/// its union - the widest branch this backend ever populates - the same way
-/// `fluxion-rhi`'s Direct3D 11 backend narrows its own three view
-/// descriptions to plain fields.
+/// `D3D12_BUFFER_SRV`. Never populated - this backend has no buffer SRVs -
+/// but its `FirstElement` is a `UINT64`, and that is exactly why this union
+/// cannot be narrowed the way Direct3D 11's three view descriptions are
+/// narrowed to plain fields (see `fluxion-rhi`'s Direct3D 11 backend): a
+/// `UINT64` anywhere in a C union forces the *whole* union to 8-byte
+/// alignment and to a size that is a multiple of 8, which every Direct3D 11
+/// view union is exempt from (none of theirs holds a 64-bit field) and every
+/// Direct3D 12 one is not. Leaving this branch out would silently shift
+/// `Tex2dSrv`'s fields four bytes short of where the runtime expects them -
+/// exactly the bug this comment exists to stop from coming back.
+pub const BufferSrv = extern struct {
+    first_element: u64 = 0,
+    num_elements: u32 = 0,
+    structure_byte_stride: u32 = 0,
+    flags: u32 = 0,
+};
+
+/// `D3D12_TEX2D_ARRAY_SRV`. Also never populated, also declared only so the
+/// union below is genuinely the runtime's size (24 bytes) rather than
+/// `Tex2dSrv`'s alone (16): this is tied with `BufferSrv` for the union's
+/// widest member.
+pub const Tex2dArraySrv = extern struct {
+    most_detailed_mip: u32 = 0,
+    mip_levels: u32 = 1,
+    first_array_slice: u32 = 0,
+    array_size: u32 = 1,
+    plane_slice: u32 = 0,
+    resource_min_lod_clamp: f32 = 0,
+};
+
+/// `D3D12_SHADER_RESOURCE_VIEW_DESC`. The union is a real `extern union` of
+/// every branch that affects its layout - not just `Texture2D`, the one
+/// branch this backend ever populates - so Zig computes the union's true
+/// size and alignment instead of this file guessing them. See `BufferSrv`'s
+/// doc comment for why guessing goes wrong here specifically.
 pub const ShaderResourceViewDesc = extern struct {
     format: Format,
     dimension: SrvDimension,
     shader_4_component_mapping: u32 = shader_4_component_mapping_identity,
-    texture2d: Tex2dSrv = .{},
+    u: extern union {
+        buffer: BufferSrv,
+        texture2d: Tex2dSrv,
+        texture2d_array: Tex2dArraySrv,
+    } = .{ .texture2d = .{} },
 };
 
 /// `D3D12_RTV_DIMENSION`.
@@ -331,12 +381,25 @@ pub const Tex2dRtv = extern struct {
     plane_slice: u32 = 0,
 };
 
-/// `D3D12_RENDER_TARGET_VIEW_DESC`, narrowed the same way `ShaderResourceViewDesc`
-/// is.
+/// `D3D12_BUFFER_RTV`. Never populated; declared, like `BufferSrv` above, only
+/// because its `FirstElement` is a `UINT64` that forces the whole union to
+/// 8-byte alignment - one more byte of padding before `Tex2dRtv` than a
+/// struct with only `Format`/`ViewDimension`/`Tex2dRtv` in it would have.
+pub const BufferRtv = extern struct {
+    first_element: u64 = 0,
+    num_elements: u32 = 0,
+};
+
+/// `D3D12_RENDER_TARGET_VIEW_DESC`. A real `extern union` of the branches
+/// that affect layout, for the same reason `ShaderResourceViewDesc`'s is -
+/// see `BufferSrv`'s doc comment.
 pub const RenderTargetViewDesc = extern struct {
     format: Format,
     dimension: RtvDimension,
-    texture2d: Tex2dRtv = .{},
+    u: extern union {
+        buffer: BufferRtv,
+        texture2d: Tex2dRtv,
+    } = .{ .texture2d = .{} },
 };
 
 /// `D3D12_FILTER`. The same bit encoding Direct3D 11 uses - see
@@ -417,7 +480,7 @@ pub const fence_flags_none: FenceFlags = 0;
 pub const ID3D12Resource = extern struct {
     vtable: *const VTable,
 
-    pub const iid = Guid.parseComptime("{696442BE-A29F-4E90-B056-8237748B4111}");
+    pub const iid = Guid.parseComptime("{696442BE-A72E-4059-BC79-5B5C98040FAD}");
 
     pub const VTable = extern struct {
         base: ID3D12Pageable.VTable,
@@ -444,8 +507,8 @@ pub const ID3D12DescriptorHeap = extern struct {
         GetDesc: *const anyopaque,
         /// The hidden-return-pointer trap: see the module comment. Called
         /// through `cpuHeapStart`/`gpuHeapStart`, never directly.
-        GetCPUDescriptorHandleForHeapStart: *const fn (*CpuDescriptorHandle, *ID3D12DescriptorHeap) callconv(.winapi) *CpuDescriptorHandle,
-        GetGPUDescriptorHandleForHeapStart: *const fn (*GpuDescriptorHandle, *ID3D12DescriptorHeap) callconv(.winapi) *GpuDescriptorHandle,
+        GetCPUDescriptorHandleForHeapStart: *const fn (*ID3D12DescriptorHeap, *CpuDescriptorHandle) callconv(.winapi) *CpuDescriptorHandle,
+        GetGPUDescriptorHandleForHeapStart: *const fn (*ID3D12DescriptorHeap, *GpuDescriptorHandle) callconv(.winapi) *GpuDescriptorHandle,
     };
 };
 
@@ -454,7 +517,7 @@ pub const ID3D12DescriptorHeap = extern struct {
 /// read from at command-list recording time.
 pub fn cpuHeapStart(heap: *ID3D12DescriptorHeap) CpuDescriptorHandle {
     var out: CpuDescriptorHandle = undefined;
-    _ = heap.vtable.GetCPUDescriptorHandleForHeapStart(&out, heap);
+    _ = heap.vtable.GetCPUDescriptorHandleForHeapStart(heap, &out);
     return out;
 }
 
@@ -463,7 +526,7 @@ pub fn cpuHeapStart(heap: *ID3D12DescriptorHeap) CpuDescriptorHandle {
 /// a meaningful one.
 pub fn gpuHeapStart(heap: *ID3D12DescriptorHeap) GpuDescriptorHandle {
     var out: GpuDescriptorHandle = undefined;
-    _ = heap.vtable.GetGPUDescriptorHandleForHeapStart(&out, heap);
+    _ = heap.vtable.GetGPUDescriptorHandleForHeapStart(heap, &out);
     return out;
 }
 
@@ -538,6 +601,15 @@ pub fn createSampler(device: *ID3D12Device, desc: *const SamplerDesc, dest: CpuD
     device.vtable.CreateSampler(device, desc, dest);
 }
 
+/// Copy `count` consecutive descriptors of `kind` starting at `src` into the
+/// ones starting at `dest`. CPU-side and immediate - not a command-list
+/// call - so it must happen between frames or before the command list that
+/// will read the destination is submitted, never concurrently with the GPU
+/// still reading the heap it writes into.
+pub fn copyDescriptorsSimple(device: *ID3D12Device, count: u32, dest: CpuDescriptorHandle, src: CpuDescriptorHandle, kind: DescriptorHeapType) void {
+    device.vtable.CopyDescriptorsSimple(device, count, dest, src, kind);
+}
+
 /// How big one descriptor of `kind` is on this device - the stride between
 /// slots in a heap, which is a driver constant and never zero. Already bound
 /// with a real signature in `d3d12.zig`; re-exported here so a caller of this
@@ -576,10 +648,16 @@ test "the descriptions the runtime reads are shaped as it expects" {
     try testing.expectEqual(@as(usize, 16), @sizeOf(DescriptorHeapDesc));
     try testing.expectEqual(@as(usize, 20), @sizeOf(HeapProperties));
     try testing.expectEqual(@as(usize, 56), @sizeOf(ResourceDesc));
-    try testing.expectEqual(@as(u32, 0x2C03), @as(u32, @bitCast(ResourceStates.generic_read)));
+    try testing.expectEqual(@as(u32, 0xAC3), @as(u32, @bitCast(ResourceStates.generic_read)));
     try testing.expectEqual(@as(usize, 16), @sizeOf(ConstantBufferViewDesc));
-    try testing.expectEqual(@as(usize, 28), @sizeOf(ShaderResourceViewDesc));
-    try testing.expectEqual(@as(usize, 16), @sizeOf(RenderTargetViewDesc));
+    // Both wider than a naive narrowing would suggest: `BufferSrv`'s and
+    // `BufferRtv`'s `UINT64 FirstElement` forces the whole union - and so
+    // the struct after it - to 8-byte alignment. See `BufferSrv`'s doc
+    // comment; this is the test that would have caught the bug it describes.
+    try testing.expectEqual(@as(usize, 40), @sizeOf(ShaderResourceViewDesc));
+    try testing.expectEqual(@as(usize, 24), @sizeOf(RenderTargetViewDesc));
+    try testing.expectEqual(@as(usize, 16), @offsetOf(ShaderResourceViewDesc, "u"));
+    try testing.expectEqual(@as(usize, 8), @offsetOf(RenderTargetViewDesc, "u"));
     try testing.expectEqual(@as(usize, 52), @sizeOf(SamplerDesc));
     try testing.expectEqual(@as(usize, 32), @sizeOf(PlacedSubresourceFootprint));
 }
@@ -631,12 +709,6 @@ test "an upload buffer, mapped and written" {
     defer dxgi_lib.unload();
     const device = try warpDeviceOrSkip(lib, &dxgi_lib);
     defer _ = com.release(device);
-
-    var raw_dbg: ?*anyopaque = null;
-    const hp: HeapProperties = .of(.upload);
-    const rd: ResourceDesc = .buffer(256);
-    const hr_dbg = device.vtable.CreateCommittedResource(device, &hp, heap_flags_none, &rd, .generic_read, null, com.iidOf(ID3D12Resource), &raw_dbg);
-    std.debug.print("CreateCommittedResource hresult bits=0x{X}\n", .{hr_dbg.bits()});
 
     const res_obj = try createCommittedResource(
         device,

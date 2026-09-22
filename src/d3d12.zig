@@ -566,7 +566,20 @@ pub const ID3D12Device = extern struct {
             d3d12_resource.CpuDescriptorHandle,
         ) callconv(.winapi) void,
         CopyDescriptors: *const anyopaque,
-        CopyDescriptorsSimple: *const anyopaque,
+        /// Not in the plan's original list of slots to fill - added because
+        /// the shared "one root descriptor table per slot group" binding
+        /// model (`fluxion-rhi`'s Direct3D 12 backend) has no other way to
+        /// assemble four arbitrary, independently-created textures' SRVs
+        /// into the four contiguous descriptors one `SetGraphicsRootDescriptorTable`
+        /// call reads: they are copied here, into a small shader-visible
+        /// "binding window" heap, right before the draw that needs them.
+        CopyDescriptorsSimple: *const fn (
+            *ID3D12Device,
+            u32,
+            d3d12_resource.CpuDescriptorHandle,
+            d3d12_resource.CpuDescriptorHandle,
+            d3d12_resource.DescriptorHeapType,
+        ) callconv(.winapi) void,
         /// Returns a struct by value. See the module comment.
         GetResourceAllocationInfo: *const anyopaque,
         /// Returns a struct by value. See the module comment.
