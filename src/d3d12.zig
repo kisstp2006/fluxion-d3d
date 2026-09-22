@@ -39,6 +39,15 @@ const dxgi = @import("dxgi.zig");
 const Guid = @import("guid.zig").Guid;
 const hresult = @import("hresult.zig");
 const level = @import("level.zig");
+// The three sibling files this module's vtable slots hand off to, once they
+// are given real signatures below. Each of them imports this file back for
+// `ID3D12Device`, `Hresult`, `Guid` and the rest of the shared plumbing - a
+// file-level cycle Zig resolves lazily and without trouble, because every
+// crossing is a pointer field in an `extern struct`, never a value embedded
+// by size.
+const d3d12_resource = @import("d3d12_resource.zig");
+const d3d12_command = @import("d3d12_command.zig");
+const d3d12_pipeline = @import("d3d12_pipeline.zig");
 
 const FeatureLevel = level.FeatureLevel;
 const Hresult = hresult.Hresult;
@@ -274,6 +283,14 @@ pub fn createCommandQueue(
     return com.received(ID3D12CommandQueue, result, raw);
 }
 
+/// How many bytes apart two descriptors of `kind` are in any heap of that
+/// type on this device - a driver constant, and never zero. `d3d12_resource.zig`
+/// re-exports this so a caller working with descriptor heaps does not also
+/// need this file.
+pub fn descriptorHandleIncrementSize(device: *ID3D12Device, kind: d3d12_resource.DescriptorHeapType) u32 {
+    return device.vtable.GetDescriptorHandleIncrementSize(device, @intFromEnum(kind));
+}
+
 // -------------------------------------------------------------------------
 // Types the calls above take and return
 // -------------------------------------------------------------------------
@@ -479,10 +496,28 @@ pub const ID3D12Device = extern struct {
             *const Guid,
             *?*anyopaque,
         ) callconv(.winapi) Hresult,
-        CreateCommandAllocator: *const anyopaque,
-        CreateGraphicsPipelineState: *const anyopaque,
+        CreateCommandAllocator: *const fn (
+            *ID3D12Device,
+            CommandListType,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
+        CreateGraphicsPipelineState: *const fn (
+            *ID3D12Device,
+            *const d3d12_pipeline.GraphicsPipelineStateDesc,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
         CreateComputePipelineState: *const anyopaque,
-        CreateCommandList: *const anyopaque,
+        CreateCommandList: *const fn (
+            *ID3D12Device,
+            u32,
+            CommandListType,
+            *d3d12_command.ID3D12CommandAllocator,
+            ?*d3d12_pipeline.ID3D12PipelineState,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
         /// Every "what can this card do" question, through one call and a
         /// struct per question. See `Feature`.
         CheckFeatureSupport: *const fn (
@@ -491,22 +526,61 @@ pub const ID3D12Device = extern struct {
             *anyopaque,
             u32,
         ) callconv(.winapi) Hresult,
-        CreateDescriptorHeap: *const anyopaque,
+        CreateDescriptorHeap: *const fn (
+            *ID3D12Device,
+            *const d3d12_resource.DescriptorHeapDesc,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
         GetDescriptorHandleIncrementSize: *const fn (*ID3D12Device, u32) callconv(.winapi) u32,
-        CreateRootSignature: *const anyopaque,
-        CreateConstantBufferView: *const anyopaque,
-        CreateShaderResourceView: *const anyopaque,
+        CreateRootSignature: *const fn (
+            *ID3D12Device,
+            u32,
+            [*]const u8,
+            usize,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
+        CreateConstantBufferView: *const fn (
+            *ID3D12Device,
+            ?*const d3d12_resource.ConstantBufferViewDesc,
+            d3d12_resource.CpuDescriptorHandle,
+        ) callconv(.winapi) void,
+        CreateShaderResourceView: *const fn (
+            *ID3D12Device,
+            ?*d3d12_resource.ID3D12Resource,
+            ?*const d3d12_resource.ShaderResourceViewDesc,
+            d3d12_resource.CpuDescriptorHandle,
+        ) callconv(.winapi) void,
         CreateUnorderedAccessView: *const anyopaque,
-        CreateRenderTargetView: *const anyopaque,
+        CreateRenderTargetView: *const fn (
+            *ID3D12Device,
+            ?*d3d12_resource.ID3D12Resource,
+            ?*const d3d12_resource.RenderTargetViewDesc,
+            d3d12_resource.CpuDescriptorHandle,
+        ) callconv(.winapi) void,
         CreateDepthStencilView: *const anyopaque,
-        CreateSampler: *const anyopaque,
+        CreateSampler: *const fn (
+            *ID3D12Device,
+            *const d3d12_resource.SamplerDesc,
+            d3d12_resource.CpuDescriptorHandle,
+        ) callconv(.winapi) void,
         CopyDescriptors: *const anyopaque,
         CopyDescriptorsSimple: *const anyopaque,
         /// Returns a struct by value. See the module comment.
         GetResourceAllocationInfo: *const anyopaque,
         /// Returns a struct by value. See the module comment.
         GetCustomHeapProperties: *const anyopaque,
-        CreateCommittedResource: *const anyopaque,
+        CreateCommittedResource: *const fn (
+            *ID3D12Device,
+            *const d3d12_resource.HeapProperties,
+            d3d12_resource.HeapFlags,
+            *const d3d12_resource.ResourceDesc,
+            d3d12_resource.ResourceStates,
+            ?*const d3d12_resource.ClearValue,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
         CreateHeap: *const anyopaque,
         CreatePlacedResource: *const anyopaque,
         CreateReservedResource: *const anyopaque,
@@ -515,10 +589,26 @@ pub const ID3D12Device = extern struct {
         OpenSharedHandleByName: *const anyopaque,
         MakeResident: *const anyopaque,
         Evict: *const anyopaque,
-        CreateFence: *const anyopaque,
+        CreateFence: *const fn (
+            *ID3D12Device,
+            u64,
+            d3d12_resource.FenceFlags,
+            *const Guid,
+            *?*anyopaque,
+        ) callconv(.winapi) Hresult,
         /// Why the device stopped working, or `s_ok` while it still does.
         GetDeviceRemovedReason: *const fn (*ID3D12Device) callconv(.winapi) Hresult,
-        GetCopyableFootprints: *const anyopaque,
+        GetCopyableFootprints: *const fn (
+            *ID3D12Device,
+            *const d3d12_resource.ResourceDesc,
+            u32,
+            u32,
+            u64,
+            ?[*]d3d12_resource.PlacedSubresourceFootprint,
+            ?[*]u32,
+            ?[*]u64,
+            ?*u64,
+        ) callconv(.winapi) void,
         CreateQueryHeap: *const anyopaque,
         SetStablePowerState: *const anyopaque,
         CreateCommandSignature: *const anyopaque,
@@ -544,7 +634,11 @@ pub const ID3D12CommandQueue = extern struct {
         base: ID3D12Pageable.VTable,
         UpdateTileMappings: *const anyopaque,
         CopyTileMappings: *const anyopaque,
-        ExecuteCommandLists: *const anyopaque,
+        ExecuteCommandLists: *const fn (
+            *ID3D12CommandQueue,
+            u32,
+            [*]const *d3d12_command.ID3D12CommandList,
+        ) callconv(.winapi) void,
         SetMarker: *const anyopaque,
         BeginEvent: *const anyopaque,
         EndEvent: *const anyopaque,
